@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>安全守护 · 浏览器控制台</title>
+  <style>
+    :root {
+      --sky-1: #e8f4fc;
+      --sky-2: #c5e4f6;
+      --sky-3: #7ec8e3;
+      --sky-4: #4aa8d8;
+      --sky-deep: #2d8cbc;
+      --glass: rgba(255, 255, 255, 0.72);
+      --glass-strong: rgba(255, 255, 255, 0.88);
+      --text: #1a3a52;
+      --text-muted: #5a7a94;
+      --shadow: 0 12px 40px rgba(45, 140, 188, 0.18);
+      --shadow-soft: 0 4px 20px rgba(45, 140, 188, 0.12);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --transition: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(145deg, var(--sky-1) 0%, var(--sky-2) 45%, #b8dce8 100%);
+      color: var(--text);
+      padding: 28px 16px 40px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .shell-wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      filter: drop-shadow(var(--shadow));
+    }
+
+    .browser-window {
+      background: linear-gradient(180deg, var(--glass-strong) 0%, var(--glass) 100%);
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: min(88vh, 820px);
+      backdrop-filter: blur(12px);
+    }
+
+    /* Title bar — window controls */
+    .title-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(232, 244, 252, 0.9));
+      border-bottom: 1px solid rgba(126, 200, 227, 0.35);
+      flex-shrink: 0;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .window-dots button {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter var(--transition);
+      box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.12);
+    }
+
+    .window-dots button:hover {
+      transform: scale(1.08);
+      filter: brightness(1.05);
+    }
+
+    .dot-close {
+      background: linear-gradient(180deg, #ff8a8a, #ff5f57);
+    }
+
+    .dot-min {
+      background: linear-gradient(180deg, #ffe08a, #ffbd2e);
+    }
+
+    .dot-max {
+      background: linear-gradient(180deg, #9beb9b, #28c840);
+    }
+
+    .title-label {
+      flex: 1;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      padding: 6px 10px 0;
+      background: rgba(255, 255, 255, 0.45);
+      border-bottom: 1px solid rgba(126, 200, 227, 0.28);
+      flex-shrink: 0;
+    }
+
+    .tab {
+      padding: 8px 18px 10px;
+      font-size: 13px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      border-bottom: none;
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+    }
+
+    .tab.active {
+      background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.92) 100%);
+      color: var(--text);
+      border-color: rgba(126, 200, 227, 0.4);
+      box-shadow: 0 -2px 12px rgba(74, 168, 216, 0.12);
+      font-weight: 600;
+    }
+
+    .tab:not(.active):hover {
+      background: rgba(255, 255, 255, 0.55);
+      color: var(--text);
+    }
+
+    /* Nav toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.78);
+      border-bottom: 1px solid rgba(126, 200, 227, 0.25);
+      flex-shrink: 0;
+    }
+
+    .nav-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(126, 200, 227, 0.35);
+      background: linear-gradient(180deg, #fff, rgba(232, 244, 252, 0.85));
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      color: var(--sky-deep);
+      transition: background var(--transition), transform 0.15s ease, box-shadow var(--transition);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .icon-btn:hover:not(:disabled) {
+      background: linear-gradient(180deg, #fff, var(--sky-1));
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(74, 168, 216, 0.2);
+    }
+
+    .icon-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .address-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(232, 244, 252, 0.65));
+      border: 1px solid rgba(126, 200, 227, 0.4);
+      box-shadow: inset 0 1px 3px rgba(45, 140, 188, 0.06);
+    }
+
+    .address-wrap .lock {
+      font-size: 12px;
+      opacity: 0.75;
+    }
+
+    #addressField {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      font-family: ui-monospace, "Cascadia Code", monospace;
+    }
+
+    /* App top nav — four mains */
+    .app-nav {
+      display: flex;
+      align-items: stretch;
+      gap: 4px;
+      padding: 12px 14px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.65), rgba(197, 228, 246, 0.45));
+      border-bottom: 1px solid rgba(126, 200, 227, 0.3);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 50;
+    }
+
+    .nav-item {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .nav-trigger {
+      width: 100%;
+      padding: 12px 14px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition), box-shadow var(--transition), transform 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nav-trigger::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(126, 200, 227, 0.35), rgba(74, 168, 216, 0.25));
+      opacity: 0;
+      transition: opacity var(--transition);
+      border-radius: inherit;
+    }
+
+    .nav-trigger span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .nav-item:hover .nav-trigger::before,
+    .nav-item.open .nav-trigger::before {
+      opacity: 1;
+    }
+
+    .nav-item:hover .nav-trigger,
+    .nav-item.open .nav-trigger {
+      color: var(--sky-deep);
+      box-shadow: 0 4px 14px rgba(74, 168, 216, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .nav-item.active-main > .nav-trigger {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(197, 228, 246, 0.75));
+      box-shadow: 0 4px 16px rgba(74, 168, 216, 0.22);
+      color: var(--sky-deep);
+    }
+
+    .nav-item.active-main > .nav-trigger::before {
+      opacity: 0.55;
+    }
+
+    .caret {
+      font-size: 10px;
+      margin-left: 6px;
+      opacity: 0.65;
+      display: inline-block;
+      transition: transform var(--transition);
+    }
+
+    .nav-item.open .caret {
+      transform: rotate(180deg);
+    }
+
+    .nav-item.no-dropdown .caret {
+      display: none;
+    }
+
+    /* Dropdown */
+    .dropdown {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 6px);
+      padding: 8px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(232, 244, 252, 0.96));
+      border: 1px solid rgba(126, 200, 227, 0.45);
+      box-shadow: 0 16px 40px rgba(45, 140, 188, 0.22);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-6px);
+      transition: opacity var(--transition), transform var(--transition), visibility var(--transition);
+      max-height: min(52vh, 380px);
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .nav-item.has-dropdown:hover .dropdown,
+    .nav-item.has-dropdown.open .dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .dropdown button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      margin-bottom: 4px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, padding-left 0.2s ease;
+    }
+
+    .dropdown button:last-child {
+      margin-bottom: 0;
+    }
+
+    .dropdown button:hover {
+      background: linear-gradient(90deg, rgba(126, 200, 227, 0.35), rgba(74, 168, 216, 0.15));
+      color: var(--sky-deep);
+      padding-left: 16px;
+    }
+
+    .dropdown button.selected {
+      background: linear-gradient(90deg, rgba(74, 168, 216, 0.28), rgba(126, 200, 227, 0.12));
+      font-weight: 600;
+      color: var(--sky-deep);
+      border-left: 3px solid var(--sky-4);
+      padding-left: 13px;
+    }
+
+    .drop-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 4px 12px 8px;
+      border-bottom: 1px solid rgba(126, 200, 227, 0.25);
+      margin-bottom: 6px;
+    }
+
+    /* Content area */
+    .content-shell {
+      flex: 1;
+      min-height: 0;
+      padding: 18px;
+      background: linear-gradient(165deg, rgba(255, 255, 255, 0.55) 0%, rgba(232, 244, 252, 0.4) 100%);
+      position: relative;
+    }
+
+    .page {
+      display: none;
+      animation: pageIn 0.38s ease;
+      height: 100%;
+      min-height: 420px;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    @keyframes pageIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .page-inner {
+      height: 100%;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 252, 255, 0.88));
+      border: 1px solid rgba(126, 200, 227, 0.35);
+      box-shadow: var(--shadow-soft);
+      padding: 24px 28px;
+      overflow: auto;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(126, 200, 227, 0.28);
+    }
+
+    .page-head h1 {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--sky-deep), var(--sky-4));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.02em;
+    }
+
+    .page-tag {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(126, 200, 227, 0.22);
+      white-space: nowrap;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(126, 200, 227, 0.3);
+      box-shadow: 0 4px 14px rgba(45, 140, 188, 0.08);
+    }
+
+    .card h3 {
+      font-size: 15px;
+      margin-bottom: 10px;
+      color: var(--sky-deep);
+    }
+
+    .card p,
+    .muted {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      margin-top: 14px;
+    }
+
+    label:first-of-type {
+      margin-top: 0;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(126, 200, 227, 0.45);
+      background: rgba(255, 255, 255, 0.95);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--sky-4);
+      box-shadow: 0 0 0 3px rgba(74, 168, 216, 0.2);
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .btn {
+      padding: 10px 22px;
+      border-radius: 999px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow var(--transition);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--sky-4), var(--sky-deep));
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(45, 140, 188, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(45, 140, 188, 0.42);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--sky-deep);
+      border: 1px solid rgba(126, 200, 227, 0.5);
+    }
+
+    .btn-ghost:hover {
+      background: var(--sky-1);
+    }
+
+    .kbd {
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(126, 200, 227, 0.25);
+      color: var(--text-muted);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      padding: 12px 22px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--sky-deep), var(--sky-4));
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 12px 32px rgba(45, 140, 188, 0.35);
+      opacity: 0;
+      transition: transform 0.35s ease, opacity 0.35s ease;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
+    table.data-table th,
+    table.data-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(126, 200, 227, 0.25);
+    }
+
+    table.data-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(74, 168, 216, 0.2);
+      color: var(--sky-deep);
+    }
+
+    @media (max-width: 720px) {
+      .app-nav {
+        flex-wrap: wrap;
+      }
+      .nav-item {
+        flex: 1 1 46%;
+      }
+      .title-label {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell-wrap">
+    <div class="browser-window" id="browserWindow">
+      <div class="title-bar">
+        <div class="window-dots" aria-hidden="true">
+          <button type="button" class="dot-close" title="关闭" onclick="fakeToast('演示：关闭')"></button>
+          <button type="button" class="dot-min" title="最小化" onclick="fakeToast('演示：最小化')"></button>
+          <button type="button" class="dot-max" title="最大化" onclick="fakeToast('演示：最大化')"></button>
+        </div>
+        <div class="title-label">MCP Agent Safe Protecter — 安全守护</div>
+      </div>
+
+      <div class="tab-bar">
+        <button type="button" class="tab active" id="mainTab">安全守护控制台</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="nav-btns">
+          <button type="button" class="icon-btn" id="btnBack" title="后退" aria-label="后退">←</button>
+          <button type="button" class="icon-btn" id="btnFwd" title="前进" aria-label="前进">→</button>
+          <button type="button" class="icon-btn" id="btnReload" title="刷新" aria-label="刷新">↻</button>
+        </div>
+        <div class="address-wrap">
+          <span class="lock" title="本地演示">🔒</span>
+          <input type="text" id="addressField" readonly value="masp://console/welcome" aria-label="地址栏" />
+        </div>
+      </div>
+
+      <nav class="app-nav" aria-label="主功能">
+        <div class="nav-item no-dropdown" data-main="login">
+          <button type="button" class="nav-trigger" data-action="login"><span>用户登录</span></button>
+        </div>
+
+        <div class="nav-item has-dropdown" data-main="detect">
+          <button type="button" class="nav-trigger" aria-expanded="false" aria-haspopup="true">
+            <span>安全检测 <span class="caret">▼</span></span>
+          </button>
+          <div class="dropdown" role="menu">
+            <div class="drop-hint">检测分支（对应 API BranchId）</div>
+            <button type="button" role="menuitem" data-page="detect-global_threat">全局威胁感知</button>
+            <button type="button" role="menuitem" data-page="detect-business_health">业务健康度</button>
+            <button type="button" role="menuitem" data-page="detect-asset_integrity">资产完整性</button>
+            <button type="button" role="menuitem" data-page="detect-self_trust">本体可信自检</button>
+            <button type="button" role="menuitem" data-page="detect-access_control">访问控制</button>
+            <button type="button" role="menuitem" data-page="detect-behavior_audit">行为审计</button>
+            <button type="button" role="menuitem" data-page="detect-data_security">数据安全</button>
+            <button type="button" role="menuitem" data-page="detect-environment_trust">环境可信</button>
+            <button type="button" role="menuitem" data-page="detect-escape_abuse">逃逸与滥用</button>
+            <button type="button" role="menuitem" data-page="detect-chain_linkage">链路联动</button>
+            <button type="button" role="menuitem" data-page="detect-compliance_policy">合规策略</button>
+            <button type="button" role="menuitem" data-page="detect-emergency_self_heal">应急自愈</button>
+          </div>
+        </div>
+
+        <div class="nav-item has-dropdown" data-main="protect">
+          <button type="button" class="nav-trigger" aria-expanded="false" aria-haspopup="true">
+            <span>安全防护 <span class="caret">▼</span></span>
+          </button>
+          <div class="dropdown" role="menu">
+            <div class="drop-hint">防护分支（对应 ProtectionBranchId）</div>
+            <button type="button" role="menuitem" data-page="protect-system_component">系统与组件漏洞防护</button>
+            <button type="button" role="menuitem" data-page="protect-business_behavior">业务行为风险防护</button>
+            <button type="button" role="menuitem" data-page="protect-agent_self">智能体本体自防护</button>
+            <button type="button" role="menuitem" data-page="protect-external_intrusion">外部入侵与恶意攻击防护</button>
+            <button type="button" role="menuitem" data-page="protect-privilege_boundary">权限越权防护</button>
+            <button type="button" role="menuitem" data-page="protect-data_guard">数据安全防护</button>
+            <button type="button" role="menuitem" data-page="protect-counterstrike">自卫对抗（防御剧本）</button>
+          </div>
+        </div>
+
+        <div class="nav-item has-dropdown" data-main="trace">
+          <button type="button" class="nav-trigger" aria-expanded="false" aria-haspopup="true">
+            <span>溯源查询 <span class="caret">▼</span></span>
+          </button>
+          <div class="dropdown" role="menu">
+            <div class="drop-hint">溯源与审计视图</div>
+            <button type="button" role="menuitem" data-page="trace-sessions">会话与事件流</button>
+            <button type="button" role="menuitem" data-page="trace-scan_audit">扫描与审计记录</button>
+            <button type="button" role="menuitem" data-page="trace-tenant">多租户会话视图</button>
+            <button type="button" role="menuitem" data-page="trace-branch_detail">溯源分支详情</button>
+            <button type="button" role="menuitem" data-page="trace-export">报告导出中心</button>
+          </div>
+        </div>
+      </nav>
+
+      <div class="content-shell">
+        <!-- Welcome -->
+        <section class="page active" id="page-welcome" data-url="masp://console/welcome">
+          <div class="page-inner">
+            <div class="page-head">
+              <h1>欢迎使用安全守护控制台</h1>
+              <span class="page-tag">单页应用 · 浏览器外壳固定</span>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <h3>操作说明</h3>
+                <p>顶部四个主入口：<strong>用户登录</strong>直接进入登录页；<strong>安全检测 / 安全防护 / 溯源查询</strong>支持悬浮或点击展开二级菜单，选中后在下方内容区切换专属布局，不打开新窗口。</p>
+              </div>
+              <div class="card">
+                <h3>快捷键</h3>
+                <p>地址栏为只读演示路径；工具栏 <span class="kbd">←</span> <span class="kbd">→</span> 在历史记录间切换页面；<span class="kbd">↻</span> 重播当前页切换动画。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Login -->
+        <section class="page" id="page-login" data-url="masp://console/auth/login">
+          <div class="page-inner">
+            <div class="page-head">
+              <h1>用户登录</h1>
+              <span class="page-tag">JWT · 账号口令</span>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <h3>账号登录</h3>
+                <label for="loginUser">用户名 / 邮箱 / 手机</label>
+                <input id="loginUser" type="text" placeholder="例如 admin 或 user@corp.com" autocomplete="username" />
+                <label for="loginPass">密码</label>
+                <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+                <div class="btn-row">
+                  <button type="button" class="btn btn-primary" onclick="fakeToast('演示：已提交登录（未连接后端）')">登录</button>
+                  <button type="button" class="btn btn-ghost" onclick="fakeToast('演示：忘记密码')">忘记密码</button>
+                </div>
+              </div>
+              <div class="card">
+                <h3>其它方式</h3>
+                <p class="muted">生产环境可对接 OAuth（微信 / QQ）、邮箱魔法链接等；此处为纯前端布局示意。</p>
+                <div class="btn-row">
+                  <button type="button" class="btn btn-ghost" onclick="fakeToast('演示：微信登录')">微信扫码</button>
+                  <button type="button" class="btn btn-ghost" onclick="fakeToast('演示：QQ 登录')">QQ 互联</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Detection pages (template-like, one example structure each) -->
+        <section class="page" id="page-detect-global_threat" data-url="masp://console/detect/global_threat">
+          <div class="page-inner">
+            <div class="page-head">
+              <h1>安全检测 · 全局威胁感知</h1>
+              <span class="page-tag">BranchId: global_threat</span>
+            </div>
+            <div class="card">
+              <h3>会话上下文</h3>
+              <label for="gt-tenant">租户 ID</label>
+              <input id="gt-tenant" placeholder="tenant-demo" />
+              <label for="gt-session">会话 ID</label>
+              <input id="gt-session" placeholder="session-uuid" />
+              <label for="gt-payload">检测载荷（JSON 示意）</label>
+              <textarea id="gt-payload" placeholder='{"tool_calls": [], "messages": []}'></textarea>
+              <div class="btn-row">
+                <button type="button" class="btn btn-primary" onclick="fakeToast('演示：已触发 scan（未请求服务器）')">运行本分支检测</button>
+                <button type="button" class="btn btn-ghost" onclick="fakeToast('演示：载入样例')">载入样例</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-business_health" data-url="masp://console/detect/business_health">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 业务健康度</h1><span class="page-tag">business_health</span></div>
+            <div class="grid-2">
+              <div class="card"><h3>策略快照</h3><p>校验会话内已执行分支与健康基线差异，输出不合规项。</p></div>
+              <div class="card"><h3>快速操作</h3><div class="btn-row"><button type="button" class="btn btn-primary" onclick="fakeToast('排队检测')">提交检测</button></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-asset_integrity" data-url="masp://console/detect/asset_integrity">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 资产完整性</h1><span class="page-tag">asset_integrity</span></div>
+            <div class="card"><h3>静态与运行时校验</h3><p class="muted">对照静态清单与运行时指纹，发现篡改或缺失。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-self_trust" data-url="masp://console/detect/self_trust">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 本体可信自检</h1><span class="page-tag">self_trust</span></div>
+            <div class="card">
+              <label>自检模式</label>
+              <select><option>触发式 TRIGGERED</option><option>周期 SCHEDULED</option></select>
+              <div class="btn-row"><button type="button" class="btn btn-primary" onclick="fakeToast('启动自检')">执行</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-access_control" data-url="masp://console/detect/access_control">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 访问控制</h1><span class="page-tag">access_control</span></div>
+            <div class="card"><p>角色、策略与工具调用边界交叉验证示意布局。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-behavior_audit" data-url="masp://console/detect/behavior_audit">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 行为审计</h1><span class="page-tag">behavior_audit</span></div>
+            <div class="card"><p>异常序列、频率与敏感动作画像占位区。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-data_security" data-url="masp://console/detect/data_security">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 数据安全</h1><span class="page-tag">data_security</span></div>
+            <div class="card"><p>分类分级、越权读取与外泄模式检测占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-environment_trust" data-url="masp://console/detect/environment_trust">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 环境可信</h1><span class="page-tag">environment_trust</span></div>
+            <div class="card"><p>运行时环境与依赖链可信度评估占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-escape_abuse" data-url="masp://console/detect/escape_abuse">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 逃逸与滥用</h1><span class="page-tag">escape_abuse</span></div>
+            <div class="card"><p>沙箱逃逸与工具滥用启发式规则占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-chain_linkage" data-url="masp://console/detect/chain_linkage">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 链路联动</h1><span class="page-tag">chain_linkage</span></div>
+            <div class="card"><p>跨会话 / 跨租户关联线索占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-compliance_policy" data-url="masp://console/detect/compliance_policy">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 合规策略</h1><span class="page-tag">compliance_policy</span></div>
+            <div class="card"><p>策略文件与执行轨迹对照占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-detect-emergency_self_heal" data-url="masp://console/detect/emergency_self_heal">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全检测 · 应急自愈</h1><span class="page-tag">emergency_self_heal</span></div>
+            <div class="card"><p>基于前置发现的编排自愈剧本占位（演示 UI）。</p></div>
+          </div>
+        </section>
+
+        <!-- Protection pages -->
+        <section class="page" id="page-protect-system_component" data-url="masp://console/protect/system_component">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全防护 · 系统与组件</h1><span class="page-tag">system_component</span></div>
+            <div class="grid-2">
+              <div class="card"><h3>评估载荷</h3><textarea placeholder='{"session_meta": {}, "tools": []}'></textarea></div>
+              <div class="card"><h3>信号预览</h3><p class="muted">调用防护引擎后对 recommended_enforcement 进行网关消费示意。</p><button type="button" class="btn btn-primary" onclick="fakeToast('evaluate 演示')">执行防护评估</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-protect-business_behavior" data-url="masp://console/protect/business_behavior">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全防护 · 业务行为</h1><span class="page-tag">business_behavior</span></div>
+            <div class="card"><p>业务流程偏离与敏感动作阻断建议占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-protect-agent_self" data-url="masp://console/protect/agent_self">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全防护 · 智能体本体</h1><span class="page-tag">agent_self</span></div>
+            <div class="card"><p>本体完整性、插件与白名单占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-protect-external_intrusion" data-url="masp://console/protect/external_intrusion">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全防护 · 外部入侵</h1><span class="page-tag">external_intrusion</span></div>
+            <div class="card"><p>恶意请求与注入尝试屏障占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-protect-privilege_boundary" data-url="masp://console/protect/privilege_boundary">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全防护 · 权限边界</h1><span class="page-tag">privilege_boundary</span></div>
+            <div class="card"><p>越权与横向移动防护占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-protect-data_guard" data-url="masp://console/protect/data_guard">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全防护 · 数据守护</h1><span class="page-tag">data_guard</span></div>
+            <div class="card"><p>脱敏、最小权限与出站审计占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-protect-counterstrike" data-url="masp://console/protect/counterstrike">
+          <div class="page-inner">
+            <div class="page-head"><h1>安全防护 · 自卫对抗</h1><span class="page-tag">counterstrike</span></div>
+            <div class="card"><p>防御剧本编排（仅防御向）占位说明。</p></div>
+          </div>
+        </section>
+
+        <!-- Trace pages -->
+        <section class="page" id="page-trace-sessions" data-url="masp://console/trace/sessions">
+          <div class="page-inner">
+            <div class="page-head"><h1>溯源查询 · 会话与事件流</h1><span class="page-tag">实时视图</span></div>
+            <table class="data-table">
+              <thead><tr><th>时间</th><th>租户</th><th>会话</th><th>事件</th><th>级别</th></tr></thead>
+              <tbody>
+                <tr><td>10:02:01</td><td>t1</td><td>sess-a</td><td>append_event</td><td><span class="pill">info</span></td></tr>
+                <tr><td>10:02:14</td><td>t1</td><td>sess-a</td><td>scan</td><td><span class="pill">low</span></td></tr>
+                <tr><td>10:03:40</td><td>t2</td><td>sess-b</td><td>protection_evaluate</td><td><span class="pill">medium</span></td></tr>
+              </tbody>
+            </table>
+            <p class="muted" style="margin-top:12px">演示数据；接入后端后可映射审计库查询。</p>
+          </div>
+        </section>
+
+        <section class="page" id="page-trace-scan_audit" data-url="masp://console/trace/audit">
+          <div class="page-inner">
+            <div class="page-head"><h1>溯源查询 · 扫描与审计</h1><span class="page-tag">masp_audit.sqlite3</span></div>
+            <div class="card"><h3>筛选条件</h3>
+              <div class="grid-2">
+                <div><label>起止时间</label><input type="text" placeholder="ISO8601 范围" /></div>
+                <div><label>分支</label><select><option>全部</option><option>traceability</option><option>global_threat</option></select></div>
+              </div>
+              <div class="btn-row"><button type="button" class="btn btn-primary" onclick="fakeToast('查询审计')">查询</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-trace-tenant" data-url="masp://console/trace/tenants">
+          <div class="page-inner">
+            <div class="page-head"><h1>溯源查询 · 多租户视图</h1><span class="page-tag">租户切换</span></div>
+            <div class="card"><p>按租户聚合会话与健康度占位卡片墙。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-trace-branch_detail" data-url="masp://console/trace/branch">
+          <div class="page-inner">
+            <div class="page-head"><h1>溯源查询 · 溯源分支详情</h1><span class="page-tag">BranchId.traceability</span></div>
+            <div class="card"><p>Finding 级别的证据链与时间线占位。</p></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-trace-export" data-url="masp://console/trace/export">
+          <div class="page-inner">
+            <div class="page-head"><h1>溯源查询 · 报告导出</h1><span class="page-tag">导出任务</span></div>
+            <div class="card">
+              <label>格式</label>
+              <select><option>JSON</option><option>PDF（占位）</option></select>
+              <div class="btn-row"><button type="button" class="btn btn-primary" onclick="fakeToast('已加入导出队列（演示）')">创建导出任务</button></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    (function () {
+      var historyStack = ["welcome"];
+      var historyPos = 0;
+
+      function $(sel) {
+        return document.querySelector(sel);
+      }
+
+      function showPage(pageId, pushHistory) {
+        if (pushHistory !== false) {
+          if (historyStack[historyPos] !== pageId) {
+            historyStack = historyStack.slice(0, historyPos + 1);
+            historyStack.push(pageId);
+            historyPos = historyStack.length - 1;
+          }
+        }
+
+        document.querySelectorAll(".page").forEach(function (el) {
+          el.classList.toggle("active", el.id === "page-" + pageId);
+        });
+
+        var activeEl = document.getElementById("page-" + pageId);
+        var url = activeEl && activeEl.getAttribute("data-url");
+        if (url) $("#addressField").value = url;
+
+        updateNavButtons();
+      }
+
+      function updateNavButtons() {
+        $("#btnBack").disabled = historyPos <= 0;
+        $("#btnFwd").disabled = historyPos >= historyStack.length - 1;
+      }
+
+      function setMainActive(mainKey) {
+        document.querySelectorAll(".nav-item").forEach(function (item) {
+          item.classList.toggle("active-main", item.getAttribute("data-main") === mainKey);
+        });
+      }
+
+      function closeAllDropdowns() {
+        document.querySelectorAll(".nav-item.has-dropdown").forEach(function (item) {
+          item.classList.remove("open");
+          var btn = item.querySelector(".nav-trigger");
+          if (btn) btn.setAttribute("aria-expanded", "false");
+        });
+      }
+
+      document.querySelector('.nav-item[data-main="login"] .nav-trigger').addEventListener("click", function () {
+        closeAllDropdowns();
+        setMainActive("login");
+        showPage("login");
+      });
+
+      document.querySelectorAll(".dropdown button[data-page]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var page = btn.getAttribute("data-page");
+          var dash = page.indexOf("-");
+          var prefix = dash >= 0 ? page.slice(0, dash) : page;
+          var rest = dash >= 0 ? page.slice(dash + 1) : "";
+          var pageId = rest ? prefix + "-" + rest : prefix;
+          var main = prefix === "detect" ? "detect" : prefix === "protect" ? "protect" : "trace";
+          setMainActive(main);
+          closeAllDropdowns();
+
+          document.querySelectorAll('.dropdown button[data-page^="' + prefix + '-"]').forEach(function (b) {
+            b.classList.toggle("selected", b === btn);
+          });
+
+          showPage(pageId);
+        });
+      });
+
+      document.querySelectorAll(".nav-item.has-dropdown .nav-trigger").forEach(function (trigger) {
+        trigger.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var item = trigger.closest(".nav-item");
+          var open = item.classList.contains("open");
+          closeAllDropdowns();
+          if (!open) {
+            item.classList.add("open");
+            trigger.setAttribute("aria-expanded", "true");
+          }
+        });
+      });
+
+      document.addEventListener("click", function () {
+        closeAllDropdowns();
+      });
+
+      document.querySelectorAll(".nav-item.has-dropdown").forEach(function (item) {
+        item.addEventListener("click", function (e) {
+          e.stopPropagation();
+        });
+      });
+
+      $("#btnBack").addEventListener("click", function () {
+        if (historyPos > 0) {
+          historyPos--;
+          var pid = historyStack[historyPos];
+          showPage(pid, false);
+          syncNavFromPage(pid);
+        }
+      });
+
+      $("#btnFwd").addEventListener("click", function () {
+        if (historyPos < historyStack.length - 1) {
+          historyPos++;
+          var pid = historyStack[historyPos];
+          showPage(pid, false);
+          syncNavFromPage(pid);
+        }
+      });
+
+      $("#btnReload").addEventListener("click", function () {
+        var cur = historyStack[historyPos];
+        var el = document.getElementById("page-" + cur);
+        if (!el) return;
+        el.style.animation = "none";
+        void el.offsetHeight;
+        el.style.animation = "";
+      });
+
+      function syncNavFromPage(pid) {
+        if (pid === "welcome") {
+          setMainActive(null);
+          document.querySelectorAll(".dropdown button").forEach(function (b) {
+            b.classList.remove("selected");
+          });
+          return;
+        }
+        if (pid === "login") {
+          setMainActive("login");
+          return;
+        }
+        var d = pid.indexOf("-");
+        var main = d >= 0 ? pid.slice(0, d) : pid;
+        setMainActive(main);
+        document.querySelectorAll(".dropdown button[data-page]").forEach(function (b) {
+          b.classList.toggle("selected", b.getAttribute("data-page") === pid);
+        });
+      }
+
+      window.fakeToast = function (msg) {
+        var t = $("#toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        clearTimeout(window.__toastTimer);
+        window.__toastTimer = setTimeout(function () {
+          t.classList.remove("show");
+        }, 2200);
+      };
+
+      showPage("welcome", false);
+      updateNavButtons();
+    })();
+  </script>
+</body>
+</html>
