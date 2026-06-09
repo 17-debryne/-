@@ -1,0 +1,20 @@
+[project]
+name = "mcp-agent-safe-protecter"
+version = "0.1.0"
+description = "MCP Agent Safe Protecter — 智能体安全检测与自愈编排"
+readme = "README.txt"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.109",
+    "uvicorn[standard]>=0.27",
+    "pywebview>=5.1",
+    "PyJWT>=2.8",
+    "prometheus-client>=0.20",
+]
+
+[project.scripts]
+masp = "mcp_agent_safe_protecter.cli:main"
+masp-http = "mcp_agent_safe_protecter.run_http:main"
+masp-core-http = "mcp_agent_safe_protecter.run_core_http:main"
+masp-auth-http = "mcp_agent_safe_protecter.auth_http:main"
+masp-desktop = "mcp_agent_safe_protecter.desktop:main"

@@ -1,0 +1,80 @@
+# 默认：双容器 —— masp（core API）+ masp-auth（认证），共享 masp_data 卷（JWT、masp_auth.sqlite3、masp_audit.sqlite3、masp_app.sqlite3）。
+# 浏览器统一入口：docker compose --profile gateway up -d（见 deploy/README.txt）
+#
+# 本地单体（旧行为）：docker compose --profile monolith up -d
+services:
+  masp-auth:
+    build: .
+    image: mcp-agent-safe-protecter:local
+    restart: unless-stopped
+    command: ["python", "-m", "mcp_agent_safe_protecter.auth_http"]
+    ports:
+      - "${MASP_AUTH_PUBLISH_PORT:-8766}:8766"
+    environment:
+      MASP_HOST: "0.0.0.0"
+      MASP_PORT: "8766"
+      MASP_DATA_DIR: /data/masp
+      MASP_LOG_LEVEL: "${MASP_LOG_LEVEL:-info}"
+      # OAuth 回调公网地址应对准网关或直连 auth 端口，见 deploy/auth-identity.env.example
+      # MASP_PUBLIC_BASE_URL: http://localhost:8080
+    volumes:
+      - masp_data:/data/masp
+
+  masp:
+    build: .
+    image: mcp-agent-safe-protecter:local
+    restart: unless-stopped
+    command: ["python", "-m", "mcp_agent_safe_protecter.run_core_http"]
+    ports:
+      - "${MASP_PUBLISH_PORT:-8765}:8765"
+    environment:
+      MASP_HOST: "0.0.0.0"
+      MASP_PORT: "8765"
+      MASP_DATA_DIR: /data/masp
+      MASP_LOG_LEVEL: "${MASP_LOG_LEVEL:-info}"
+      # MASP_CONFIG_SOURCE / Vault / Nacos 等（core 与 auth 均可读取）
+    volumes:
+      - masp_data:/data/masp
+
+  masp-gateway:
+    profiles: ["gateway"]
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "${MASP_GATEWAY_PORT:-8080}:80"
+    volumes:
+      - ./deploy/nginx/gateway-docker.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - masp
+      - masp-auth
+
+  masp-monolith:
+    profiles: ["monolith"]
+    build: .
+    image: mcp-agent-safe-protecter:local
+    restart: unless-stopped
+    command: ["python", "-m", "mcp_agent_safe_protecter.run_http"]
+    ports:
+      - "${MASP_PUBLISH_PORT:-8765}:8765"
+    environment:
+      MASP_HOST: "0.0.0.0"
+      MASP_PORT: "8765"
+      MASP_DATA_DIR: /data/masp
+      MASP_LOG_LEVEL: "${MASP_LOG_LEVEL:-info}"
+    volumes:
+      - masp_data:/data/masp
+
+  nginx-https:
+    profiles: ["https"]
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "${MASP_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+    depends_on:
+      - masp
+
+volumes:
+  masp_data:
