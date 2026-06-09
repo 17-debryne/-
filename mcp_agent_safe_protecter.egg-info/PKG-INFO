@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: mcp-agent-safe-protecter
+Version: 0.1.0
+Summary: MCP Agent Safe Protecter — 智能体安全检测与自愈编排
+Requires-Python: >=3.10
+Description-Content-Type: text/plain
+Requires-Dist: fastapi>=0.109
+Requires-Dist: uvicorn[standard]>=0.27
+Requires-Dist: pywebview>=5.1
+
+MCP Agent Safe Protecter
+========================
+
+Python 包目录：mcp_agent_safe_protecter/
+
+运行演示（在 D:\MCP Agent Safe Protecter 下）：
+  python -m mcp_agent_safe_protecter.demo_run

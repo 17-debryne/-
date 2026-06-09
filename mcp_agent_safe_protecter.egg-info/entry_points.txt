@@ -1,0 +1,3 @@
+[console_scripts]
+masp-desktop = mcp_agent_safe_protecter.desktop:main
+masp-http = mcp_agent_safe_protecter.run_http:main
